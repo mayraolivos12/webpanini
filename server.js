@@ -40,7 +40,10 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  const requestPath = req.url === "/" ? "/index.html" : decodeURIComponent(req.url.split("?")[0]);
+  const cleanUrl = decodeURIComponent(req.url.split("?")[0]);
+  const routePath = cleanUrl.replace(/\/+$/, "") || "/";
+  const appRoutes = new Set(["/", "/login", "/album"]);
+  const requestPath = appRoutes.has(routePath) ? "/index.html" : cleanUrl;
   const filePath = path.normalize(path.join(root, requestPath));
   if (!filePath.startsWith(root)) return notFound(res);
 

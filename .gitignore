@@ -5,4 +5,5 @@ server.log
 server.err.log
 node_modules/
 .env
+client_secret_*.json
 .DS_Store

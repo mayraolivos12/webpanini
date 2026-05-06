@@ -9,8 +9,39 @@
     <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Kalam:wght@300;400;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body>
-    <main class="artboard">
+  <body class="auth-loading">
+    <section id="loadingView" class="loading-view" aria-live="polite">
+      <div class="loading-card">
+        <p class="mono side-kicker">ALBUM PANINI '26</p>
+        <h1>Cargando tu album...</h1>
+      </div>
+    </section>
+
+    <section id="authPanel" class="auth-panel" hidden>
+      <div class="login-art">
+        <p class="mono side-kicker">ALBUM PANINI '26</p>
+        <h1>Tu album, guardado en la nube</h1>
+        <p>Controla faltantes, repetidas, extras y progreso por pais desde cualquier equipo.</p>
+        <div class="login-stickers" aria-hidden="true">
+          <span>COL5</span><span>MEX10</span><span>FWC9</span><span>CC-LAM7</span>
+        </div>
+      </div>
+      <div class="login-card">
+        <p class="mono side-kicker">CUENTA</p>
+        <h2>Inicia sesion</h2>
+        <button id="googleBtn" class="google-btn" type="button">Continuar con Google</button>
+        <div class="login-divider">o usa correo</div>
+        <form id="authForm" class="auth-form">
+          <input id="authEmail" type="email" placeholder="correo" autocomplete="email" />
+          <input id="authPassword" type="password" placeholder="contrasena" autocomplete="current-password" />
+          <button id="loginBtn" type="submit">Entrar</button>
+          <button id="signupBtn" type="button">Crear cuenta</button>
+        </form>
+        <p id="authFeedback" class="auth-feedback" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <main id="appView" class="artboard" hidden>
       <header class="appbar">
         <div class="brand-row">
           <div class="brand">ALBUM PANINI <span>'26</span></div>
@@ -25,29 +56,6 @@
           <button class="pill-btn solid" id="focusChat">+ ingreso rapido</button>
         </div>
       </header>
-
-      <section id="authPanel" class="auth-panel" hidden>
-        <div class="login-art">
-          <p class="mono side-kicker">ALBUM PANINI '26</p>
-          <h1>Tu album, guardado en la nube</h1>
-          <p>Controla faltantes, repetidas, extras y progreso por pais desde cualquier equipo.</p>
-          <div class="login-stickers" aria-hidden="true">
-            <span>COL5</span><span>MEX10</span><span>FWC9</span><span>CC-LAM7</span>
-          </div>
-        </div>
-        <div class="login-card">
-          <p class="mono side-kicker">CUENTA</p>
-          <h2>Inicia sesion</h2>
-          <button id="googleBtn" class="google-btn" type="button">Continuar con Google</button>
-          <div class="login-divider">o usa correo</div>
-          <form id="authForm" class="auth-form">
-            <input id="authEmail" type="email" placeholder="correo" autocomplete="email" />
-            <input id="authPassword" type="password" placeholder="contrasena" autocomplete="current-password" />
-            <button id="loginBtn" type="submit">Entrar</button>
-            <button id="signupBtn" type="button">Crear cuenta</button>
-          </form>
-        </div>
-      </section>
 
       <nav id="countryGrid" class="country-tabs" aria-label="Paises"></nav>
 

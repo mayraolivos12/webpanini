@@ -32,6 +32,30 @@ body {
   padding: 22px;
 }
 
+body.auth-loading,
+body.auth-required {
+  padding: 0;
+}
+
+body.auth-loading #appView,
+body.auth-loading #authPanel,
+body.auth-required #appView,
+body.authenticated #authPanel,
+body.authenticated #loadingView,
+body.local-mode #authPanel,
+body.local-mode #loadingView {
+  display: none;
+}
+
+body.auth-required #authPanel {
+  display: grid;
+}
+
+body.authenticated #appView,
+body.local-mode #appView {
+  display: block;
+}
+
 button, input, select {
   border: 1.5px solid var(--ink);
   border-radius: 8px;
@@ -135,16 +159,42 @@ h1, h2, .brand, .display {
   padding: 4px 10px;
 }
 
+.loading-view {
+  align-items: center;
+  background:
+    repeating-linear-gradient(-25deg, transparent 0 18px, rgba(26, 26, 26, .05) 18px 19px),
+    var(--pn-cream);
+  display: grid;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: 24px;
+  place-items: center;
+}
+
+.loading-card {
+  background: var(--paper);
+  border: 2.5px solid var(--ink);
+  border-radius: 16px;
+  box-shadow: 5px 5px 0 var(--ink);
+  padding: 28px;
+  width: min(92vw, 460px);
+}
+
+.loading-card h1 {
+  font-size: 32px;
+  margin: 0;
+}
+
 .auth-panel {
   align-items: stretch;
   background:
     repeating-linear-gradient(-25deg, transparent 0 18px, rgba(26, 26, 26, .04) 18px 19px),
     var(--pn-cream);
   border-bottom: 0;
-  display: grid;
   gap: 18px;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 430px);
-  min-height: calc(100vh - 98px);
+  min-height: 100vh;
+  min-height: 100svh;
   padding: 34px;
   position: relative;
   z-index: 1;
@@ -254,9 +304,10 @@ h1, h2, .brand, .display {
   height: 1px;
 }
 
-body.auth-required .country-tabs,
-body.auth-required .body-grid {
-  display: none;
+.auth-feedback {
+  color: var(--country-accent);
+  font-size: 13px;
+  margin: 0;
 }
 
 .pill-btn {
@@ -841,6 +892,25 @@ body.auth-required .body-grid {
   .auth-panel,
   .auth-form {
     grid-template-columns: 1fr;
+  }
+  .auth-panel {
+    align-content: start;
+    gap: 14px;
+    padding: 18px;
+  }
+  .login-art {
+    min-height: 360px;
+    padding: 24px;
+  }
+  .login-art h1 {
+    font-size: clamp(40px, 15vw, 72px);
+  }
+  .login-art p {
+    font-size: 18px;
+  }
+  .login-card {
+    align-self: stretch;
+    box-shadow: 4px 4px 0 var(--ink);
   }
   .brand-row {
     align-items: flex-start;

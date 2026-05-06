@@ -1,4 +1,6 @@
 const STORAGE_KEY = "webpanini-collection-v1";
+const LOGIN_PATH = "/login";
+const ALBUM_PATH = "/album";
 const stickers = window.STICKERS || [];
 const byCode = new Map(stickers.map((item) => [item.code.toUpperCase(), item]));
 const albumStickers = stickers.filter((item) => item.inAlbum);
@@ -85,6 +87,8 @@ let currentUser = null;
 let cloudEnabled = false;
 
 const els = {
+  loadingView: document.querySelector("#loadingView"),
+  appView: document.querySelector("#appView"),
   albumCounter: document.querySelector("#albumCounter"),
   albumProgress: document.querySelector("#albumProgress"),
   ownedPercent: document.querySelector("#ownedPercent"),
@@ -106,6 +110,7 @@ const els = {
   authEmail: document.querySelector("#authEmail"),
   authPassword: document.querySelector("#authPassword"),
   authStatus: document.querySelector("#authStatus"),
+  authFeedback: document.querySelector("#authFeedback"),
   signupBtn: document.querySelector("#signupBtn"),
   googleBtn: document.querySelector("#googleBtn"),
   logoutBtn: document.querySelector("#logoutBtn"),
@@ -138,7 +143,7 @@ async function init() {
   bindEvents();
   addMessage("Listo. Ejemplo: Tengo COL 1, 2 y CC-LAM7 repetida.");
   await setupSupabase();
-  render();
+  if (!cloudEnabled || currentUser) render();
 }
 
 function bindEvents() {
@@ -193,6 +198,7 @@ function saveCollection() {
 }
 
 async function setupSupabase() {
+  setAuthScreenState("loading");
   const env = window.WEBPANINI_ENV || {};
   if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
     cloudEnabled = false;
@@ -202,8 +208,9 @@ async function setupSupabase() {
   }
 
   if (!window.supabase) {
-    cloudEnabled = false;
-    addMessage("Login apagado: no cargo la libreria de Supabase. Revisa conexion/CDN.");
+    cloudEnabled = true;
+    currentUser = null;
+    setAuthFeedback("No cargo la libreria de Supabase. Revisa conexion/CDN.");
     renderAuthState();
     return;
   }
@@ -225,44 +232,103 @@ async function setupSupabase() {
 
 function renderAuthState() {
   if (!cloudEnabled) {
-    els.authPanel.hidden = true;
-    document.body.classList.remove("auth-required");
+    setAuthScreenState("local");
     els.logoutBtn.hidden = true;
     els.authStatus.textContent = "Modo local";
     return;
   }
-  els.authPanel.hidden = Boolean(currentUser);
-  document.body.classList.toggle("auth-required", cloudEnabled && !currentUser);
+
+  if (currentUser) {
+    navigateTo(ALBUM_PATH);
+    setAuthScreenState("album");
+  } else {
+    navigateTo(LOGIN_PATH);
+    setAuthScreenState("login");
+  }
   els.logoutBtn.hidden = !currentUser;
   els.authStatus.textContent = currentUser ? currentUser.email : "Sin sesion";
 }
 
+function setAuthScreenState(state) {
+  document.body.classList.remove("auth-loading", "auth-required", "authenticated", "local-mode");
+  if (state === "loading") document.body.classList.add("auth-loading");
+  if (state === "login") document.body.classList.add("auth-required");
+  if (state === "album") document.body.classList.add("authenticated");
+  if (state === "local") document.body.classList.add("local-mode");
+
+  els.loadingView.hidden = state !== "loading";
+  els.authPanel.hidden = state !== "login";
+  els.appView.hidden = !["album", "local"].includes(state);
+}
+
+function navigateTo(path) {
+  const currentPath = normalizePath(window.location.pathname);
+  if (currentPath === path) return;
+  window.history.replaceState(null, "", path);
+}
+
+function normalizePath(pathname) {
+  if (!pathname || pathname === "/") return "/";
+  return pathname.replace(/\/+$/, "") || "/";
+}
+
+function getAppUrl(path = "") {
+  const base = (window.WEBPANINI_ENV?.APP_URL || window.location.origin).replace(/\/+$/, "");
+  return `${base}${path}`;
+}
+
+function setAuthFeedback(message) {
+  if (els.authFeedback) els.authFeedback.textContent = message || "";
+}
+
 async function signIn() {
+  if (!supabaseClient) {
+    setAuthFeedback("Login no disponible: Supabase no cargo correctamente.");
+    return;
+  }
   const email = els.authEmail.value.trim();
   const password = els.authPassword.value;
+  setAuthFeedback("");
   const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-  if (error) addMessage(`Login: ${error.message}`);
+  if (error) setAuthFeedback(`Login: ${error.message}`);
 }
 
 async function signUp() {
+  if (!supabaseClient) {
+    setAuthFeedback("Crear cuenta no disponible: Supabase no cargo correctamente.");
+    return;
+  }
   const email = els.authEmail.value.trim();
   const password = els.authPassword.value;
-  const redirectTo = (window.WEBPANINI_ENV?.APP_URL || window.location.origin);
+  const redirectTo = getAppUrl(ALBUM_PATH);
+  setAuthFeedback("");
   const { error } = await supabaseClient.auth.signUp({ email, password, options: { emailRedirectTo: redirectTo } });
-  addMessage(error ? `Crear cuenta: ${error.message}` : "Cuenta creada. Revisa el correo si Supabase pide confirmacion.");
+  setAuthFeedback(error ? `Crear cuenta: ${error.message}` : "Cuenta creada. Revisa el correo si Supabase pide confirmacion.");
 }
 
 async function signInWithGoogle() {
-  const redirectTo = (window.WEBPANINI_ENV?.APP_URL || window.location.origin);
+  if (!supabaseClient) {
+    setAuthFeedback("Google no disponible: Supabase no cargo correctamente.");
+    return;
+  }
+  const redirectTo = getAppUrl(ALBUM_PATH);
+  setAuthFeedback("");
   const { error } = await supabaseClient.auth.signInWithOAuth({
     provider: "google",
     options: { redirectTo },
   });
-  if (error) addMessage(`Google: ${error.message}`);
+  if (error) setAuthFeedback(`Google: ${error.message}`);
 }
 
 async function signOut() {
+  if (!supabaseClient) {
+    navigateTo(LOGIN_PATH);
+    renderAuthState();
+    return;
+  }
   await supabaseClient.auth.signOut();
+  navigateTo(LOGIN_PATH);
+  renderAuthState();
 }
 
 async function loadCloudCollection() {
