@@ -192,8 +192,16 @@ function saveCollection() {
 
 async function setupSupabase() {
   const env = window.WEBPANINI_ENV || {};
-  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY || !window.supabase) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
     cloudEnabled = false;
+    addMessage("Login apagado: abre la app desde Hostinger/Node, no desde el archivo local.");
+    renderAuthState();
+    return;
+  }
+
+  if (!window.supabase) {
+    cloudEnabled = false;
+    addMessage("Login apagado: no cargo la libreria de Supabase. Revisa conexion/CDN.");
     renderAuthState();
     return;
   }
