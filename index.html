@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Album Panini Mundial 2026</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Kalam:wght@300;400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="artboard">
+      <header class="appbar">
+        <div class="brand-row">
+          <div class="brand">ALBUM PANINI <span>'26</span></div>
+          <div id="albumCounter" class="mono">0 / 980 · 0%</div>
+          <div class="mini-progress"><span id="albumProgress"></span></div>
+        </div>
+        <div class="app-actions">
+          <span id="authStatus" class="auth-status">Modo local</span>
+          <button class="pill-btn" id="logoutBtn" hidden>salir</button>
+          <button class="pill-btn" id="focusSearch">buscar</button>
+          <button class="pill-btn" id="showExtras">extras</button>
+          <button class="pill-btn solid" id="focusChat">+ ingreso rapido</button>
+        </div>
+      </header>
+
+      <section id="authPanel" class="auth-panel" hidden>
+        <div>
+          <p class="mono side-kicker">CUENTA</p>
+          <h2>Inicia sesion para guardar tu album</h2>
+          <p>Con login, tus laminas quedan guardadas en la nube y puedes abrirlas desde otro equipo.</p>
+        </div>
+        <form id="authForm" class="auth-form">
+          <input id="authEmail" type="email" placeholder="correo" autocomplete="email" />
+          <input id="authPassword" type="password" placeholder="contrasena" autocomplete="current-password" />
+          <button id="loginBtn" type="submit">Entrar</button>
+          <button id="signupBtn" type="button">Crear cuenta</button>
+        </form>
+      </section>
+
+      <nav id="countryGrid" class="country-tabs" aria-label="Paises"></nav>
+
+      <section class="body-grid">
+        <section class="country-panel">
+          <header class="country-hero">
+            <div class="hero-copy">
+              <p id="sectionKicker" class="mono kicker">SELECCION · COL</p>
+              <h1 id="sectionTitle">COLOMBIA</h1>
+            </div>
+            <div id="heroFlag" class="hero-flag"></div>
+            <div class="hero-stat">
+              <strong id="sectionProgress">0/20</strong>
+              <span id="sectionSubstat">20 faltan · 0 repe</span>
+            </div>
+          </header>
+
+          <section class="filter-strip">
+            <button class="chip active" data-state-short="all">TODAS</button>
+            <button class="chip" data-state-short="owned">TENGO</button>
+            <button class="chip" data-state-short="missing">FALTAN</button>
+            <button class="chip" data-state-short="duplicates">REPE</button>
+            <input id="searchInput" placeholder="buscar nombre / codigo" />
+            <select id="stateFilter" aria-label="Filtro de estado">
+              <option value="all">Todas</option>
+              <option value="owned">Conseguidas</option>
+              <option value="missing">Faltantes</option>
+              <option value="duplicates">Repetidas</option>
+              <option value="extras">Extras</option>
+            </select>
+          </section>
+
+          <section id="stickersGrid" class="stickers-grid" aria-label="Laminas"></section>
+        </section>
+
+        <aside class="side-panel">
+          <section class="side-card missing-card">
+            <p class="mono side-kicker">QUE TE FALTA</p>
+            <h2 id="missingTitle">20 LAMINAS</h2>
+            <div id="missingPreview" class="mini-stickers"></div>
+          </section>
+
+          <section class="side-card dup-card">
+            <p class="mono side-kicker purple">PUEDES CAMBIAR</p>
+            <div id="duplicatePreview" class="swap-list"></div>
+          </section>
+
+          <section class="side-card quick-card">
+            <p class="mono side-kicker">INGRESO RAPIDO</p>
+            <form id="chatForm" class="quick-form">
+              <input id="chatInput" placeholder="COL 1, 2..." autocomplete="off" />
+              <button>OK</button>
+            </form>
+            <div id="messages" class="messages"></div>
+          </section>
+
+          <section class="overall-card">
+            <p class="mono">ALBUM COMPLETO</p>
+            <div class="overall-line">
+              <strong id="ownedPercent">0%</strong>
+              <span id="ownedTotal">0 / 980</span>
+            </div>
+            <div class="overall-progress"><span id="overallProgress"></span></div>
+            <div class="overall-grid">
+              <span>Faltan <b id="missingTotal">980</b></span>
+              <span>Repe <b id="dupeTotal">0</b></span>
+              <span>Extras <b id="extraTotal">0</b></span>
+            </div>
+          </section>
+
+          <button id="resetBtn" class="reset-btn">Reiniciar datos</button>
+        </aside>
+      </section>
+    </main>
+
+    <div id="stickerSheet" class="sheet" hidden>
+      <button id="closeSheet" class="sheet-backdrop" aria-label="Cerrar detalle"></button>
+      <article class="sheet-card">
+        <div class="sheet-header">
+          <div>
+            <p id="sheetSection" class="mono side-kicker"></p>
+            <h2 id="sheetTitle"></h2>
+          </div>
+          <button id="sheetCloseBtn" class="icon-btn" aria-label="Cerrar">x</button>
+        </div>
+        <div class="sheet-code" id="sheetCode"></div>
+        <p id="sheetStatus" class="sheet-status"></p>
+        <div class="counter-actions">
+          <button id="sheetMinus" class="secondary">Quitar</button>
+          <strong id="sheetCount">0</strong>
+          <button id="sheetPlus">Agregar</button>
+        </div>
+      </article>
+    </div>
+
+    <script src="/env.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

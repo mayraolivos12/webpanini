@@ -1,0 +1,8 @@
+Web Llenado Album Panini Mundial/
+Web Llenado Album Panini Mundial.zip
+Git-*.exe
+server.log
+server.err.log
+node_modules/
+.env
+.DS_Store

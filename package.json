@@ -1,0 +1,12 @@
+{
+  "name": "webpanini",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Control web para el álbum Panini Mundial 2026.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
