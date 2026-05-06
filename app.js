@@ -107,6 +107,7 @@ const els = {
   authPassword: document.querySelector("#authPassword"),
   authStatus: document.querySelector("#authStatus"),
   signupBtn: document.querySelector("#signupBtn"),
+  googleBtn: document.querySelector("#googleBtn"),
   logoutBtn: document.querySelector("#logoutBtn"),
   focusSearch: document.querySelector("#focusSearch"),
   showExtras: document.querySelector("#showExtras"),
@@ -177,6 +178,7 @@ function bindEvents() {
     await signIn();
   });
   els.signupBtn.addEventListener("click", signUp);
+  els.googleBtn.addEventListener("click", signInWithGoogle);
   els.logoutBtn.addEventListener("click", signOut);
 }
 
@@ -224,11 +226,13 @@ async function setupSupabase() {
 function renderAuthState() {
   if (!cloudEnabled) {
     els.authPanel.hidden = true;
+    document.body.classList.remove("auth-required");
     els.logoutBtn.hidden = true;
     els.authStatus.textContent = "Modo local";
     return;
   }
   els.authPanel.hidden = Boolean(currentUser);
+  document.body.classList.toggle("auth-required", cloudEnabled && !currentUser);
   els.logoutBtn.hidden = !currentUser;
   els.authStatus.textContent = currentUser ? currentUser.email : "Sin sesion";
 }
@@ -246,6 +250,15 @@ async function signUp() {
   const redirectTo = (window.WEBPANINI_ENV?.APP_URL || window.location.origin);
   const { error } = await supabaseClient.auth.signUp({ email, password, options: { emailRedirectTo: redirectTo } });
   addMessage(error ? `Crear cuenta: ${error.message}` : "Cuenta creada. Revisa el correo si Supabase pide confirmacion.");
+}
+
+async function signInWithGoogle() {
+  const redirectTo = (window.WEBPANINI_ENV?.APP_URL || window.location.origin);
+  const { error } = await supabaseClient.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo },
+  });
+  if (error) addMessage(`Google: ${error.message}`);
 }
 
 async function signOut() {

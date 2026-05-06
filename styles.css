@@ -136,19 +136,22 @@ h1, h2, .brand, .display {
 }
 
 .auth-panel {
-  align-items: center;
-  background: var(--paper);
-  border-bottom: 2px solid var(--ink);
+  align-items: stretch;
+  background:
+    repeating-linear-gradient(-25deg, transparent 0 18px, rgba(26, 26, 26, .04) 18px 19px),
+    var(--pn-cream);
+  border-bottom: 0;
   display: grid;
-  gap: 14px;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 460px);
-  padding: 14px 22px;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 430px);
+  min-height: calc(100vh - 98px);
+  padding: 34px;
   position: relative;
   z-index: 1;
 }
 
 .auth-panel h2 {
-  font-size: 20px;
+  font-size: 34px;
   margin-bottom: 6px;
 }
 
@@ -157,21 +160,103 @@ h1, h2, .brand, .display {
   margin-bottom: 0;
 }
 
+.login-art,
+.login-card {
+  background: var(--paper);
+  border: 2.5px solid var(--ink);
+  border-radius: 16px;
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+.login-art {
+  background:
+    repeating-linear-gradient(-22deg, transparent 0 32px, rgba(0, 56, 147, .14) 32px 34px),
+    linear-gradient(135deg, rgba(252, 209, 22, .75), rgba(206, 17, 38, .16)),
+    var(--paper);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 32px;
+}
+
+.login-art h1 {
+  font-size: clamp(42px, 7vw, 86px);
+  line-height: .92;
+  max-width: 780px;
+  text-transform: uppercase;
+}
+
+.login-art p {
+  font-size: 22px;
+  max-width: 620px;
+}
+
+.login-stickers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.login-stickers span {
+  aspect-ratio: 1;
+  background: rgba(255, 255, 255, .72);
+  border: 1.5px solid var(--ink);
+  border-radius: 10px;
+  display: inline-flex;
+  font-family: "Archivo Black", sans-serif;
+  min-width: 88px;
+  padding: 10px;
+}
+
+.login-card {
+  align-self: center;
+  display: grid;
+  gap: 14px;
+  padding: 24px;
+}
+
 .auth-form {
   display: grid;
   gap: 8px;
-  grid-template-columns: 1fr 1fr auto auto;
+  grid-template-columns: 1fr;
 }
 
 .auth-form input {
   min-width: 0;
-  padding: 8px 10px;
+  padding: 12px 14px;
 }
 
-.auth-form button {
+.auth-form button,
+.google-btn {
   font-family: "Archivo Black", sans-serif;
-  font-size: 11px;
-  padding: 8px 12px;
+  font-size: 12px;
+  padding: 12px 14px;
+}
+
+.google-btn {
+  background: #fff;
+  width: 100%;
+}
+
+.login-divider {
+  align-items: center;
+  color: var(--ink-2);
+  display: grid;
+  font-size: 13px;
+  gap: 8px;
+  grid-template-columns: 1fr auto 1fr;
+}
+
+.login-divider::before,
+.login-divider::after {
+  background: var(--ink);
+  content: "";
+  height: 1px;
+}
+
+body.auth-required .country-tabs,
+body.auth-required .body-grid {
+  display: none;
 }
 
 .pill-btn {

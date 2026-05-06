@@ -27,17 +27,26 @@
       </header>
 
       <section id="authPanel" class="auth-panel" hidden>
-        <div>
-          <p class="mono side-kicker">CUENTA</p>
-          <h2>Inicia sesion para guardar tu album</h2>
-          <p>Con login, tus laminas quedan guardadas en la nube y puedes abrirlas desde otro equipo.</p>
+        <div class="login-art">
+          <p class="mono side-kicker">ALBUM PANINI '26</p>
+          <h1>Tu album, guardado en la nube</h1>
+          <p>Controla faltantes, repetidas, extras y progreso por pais desde cualquier equipo.</p>
+          <div class="login-stickers" aria-hidden="true">
+            <span>COL5</span><span>MEX10</span><span>FWC9</span><span>CC-LAM7</span>
+          </div>
         </div>
-        <form id="authForm" class="auth-form">
-          <input id="authEmail" type="email" placeholder="correo" autocomplete="email" />
-          <input id="authPassword" type="password" placeholder="contrasena" autocomplete="current-password" />
-          <button id="loginBtn" type="submit">Entrar</button>
-          <button id="signupBtn" type="button">Crear cuenta</button>
-        </form>
+        <div class="login-card">
+          <p class="mono side-kicker">CUENTA</p>
+          <h2>Inicia sesion</h2>
+          <button id="googleBtn" class="google-btn" type="button">Continuar con Google</button>
+          <div class="login-divider">o usa correo</div>
+          <form id="authForm" class="auth-form">
+            <input id="authEmail" type="email" placeholder="correo" autocomplete="email" />
+            <input id="authPassword" type="password" placeholder="contrasena" autocomplete="current-password" />
+            <button id="loginBtn" type="submit">Entrar</button>
+            <button id="signupBtn" type="button">Crear cuenta</button>
+          </form>
+        </div>
       </section>
 
       <nav id="countryGrid" class="country-tabs" aria-label="Paises"></nav>
