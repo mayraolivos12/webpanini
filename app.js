@@ -85,6 +85,7 @@ let selectedCode = "";
 let supabaseClient = null;
 let currentUser = null;
 let cloudEnabled = false;
+let chatProcessing = false;
 
 const els = {
   loadingView: document.querySelector("#loadingView"),
@@ -100,6 +101,7 @@ const els = {
   messages: document.querySelector("#messages"),
   chatForm: document.querySelector("#chatForm"),
   chatInput: document.querySelector("#chatInput"),
+  chatSubmit: document.querySelector("#chatSubmit"),
   searchInput: document.querySelector("#searchInput"),
   stateFilter: document.querySelector("#stateFilter"),
   countryGrid: document.querySelector("#countryGrid"),
@@ -149,8 +151,16 @@ async function init() {
 function bindEvents() {
   els.chatForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    await applyChat(els.chatInput.value);
-    els.chatInput.value = "";
+    if (chatProcessing) return;
+    const text = els.chatInput.value;
+    if (!text.trim()) return;
+    setChatProcessing(true);
+    try {
+      await applyChat(text);
+      els.chatInput.value = "";
+    } finally {
+      setChatProcessing(false);
+    }
   });
   els.searchInput.addEventListener("input", render);
   els.stateFilter.addEventListener("change", render);
@@ -167,12 +177,7 @@ function bindEvents() {
     render();
   });
   els.resetBtn.addEventListener("click", () => {
-    if (!confirm("Reiniciar todo el control del album?")) return;
-    collection = {};
-    saveCollection();
-    closeSheet();
-    addMessage("Datos reiniciados.");
-    render();
+    resetCollection();
   });
   els.closeSheet.addEventListener("click", closeSheet);
   els.sheetCloseBtn.addEventListener("click", closeSheet);
@@ -187,14 +192,28 @@ function bindEvents() {
   els.logoutBtn.addEventListener("click", signOut);
 }
 
+async function resetCollection() {
+  if (!confirm("Reiniciar todo el control del album?")) return;
+  collection = {};
+  try {
+    await saveCollection();
+  } catch (error) {
+    addMessage(`No se pudo guardar en la nube: ${error.message}`);
+    return;
+  }
+  closeSheet();
+  addMessage("Datos reiniciados.");
+  render();
+}
+
 function loadCollection() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
   catch { return {}; }
 }
 
-function saveCollection() {
+async function saveCollection() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(collection));
-  if (currentUser) saveCloudCollection();
+  if (currentUser) await saveCloudCollection();
 }
 
 async function setupSupabase() {
@@ -347,12 +366,41 @@ async function saveCloudCollection() {
   const rows = Object.entries(collection)
     .filter(([, quantity]) => quantity > 0)
     .map(([code, quantity]) => ({ user_id: currentUser.id, code, quantity, updated_at: new Date().toISOString() }));
+  const activeCodes = new Set(rows.map((row) => row.code));
+  const { data: existingRows, error: readError } = await supabaseClient
+    .from("user_stickers")
+    .select("code")
+    .eq("user_id", currentUser.id);
+  if (readError) throw readError;
 
-  await supabaseClient.from("user_stickers").delete().eq("user_id", currentUser.id);
-  if (rows.length) await supabaseClient.from("user_stickers").upsert(rows);
+  if (rows.length) {
+    const { error: upsertError } = await supabaseClient.from("user_stickers").upsert(rows);
+    if (upsertError) throw upsertError;
+  }
+
+  const staleCodes = (existingRows || [])
+    .map((row) => row.code)
+    .filter((code) => !activeCodes.has(code));
+
+  if (!staleCodes.length) return;
+  const { error: deleteError } = await supabaseClient
+    .from("user_stickers")
+    .delete()
+    .eq("user_id", currentUser.id)
+    .in("code", staleCodes);
+  if (deleteError) throw deleteError;
+}
+
+function setChatProcessing(isProcessing) {
+  chatProcessing = isProcessing;
+  els.chatInput.disabled = isProcessing;
+  els.chatSubmit.disabled = isProcessing;
+  els.chatSubmit.textContent = isProcessing ? "..." : "OK";
+  els.chatForm.classList.toggle("is-processing", isProcessing);
 }
 
 async function applyChat(text) {
+  addMessage("Procesando laminas...");
   const operations = await getChatOperations(text);
   if (!operations.length) {
     addMessage("No encontre codigos validos. Usa COL 1, MEX13, FWC9, CC-LAM7, LD o CR.");
@@ -363,10 +411,15 @@ async function applyChat(text) {
     if (action === "missing") collection[code] = 0;
     else if (action === "remove") collection[code] = Math.max(0, current - 1);
     else if (action === "duplicate") collection[code] = Math.max(2, current + 1);
-    else collection[code] = current + 1;
+    else collection[code] = Math.max(1, current);
   });
-  saveCollection();
-  addMessage(`Aplicado: ${operations.map((op) => op.code).join(", ")}`);
+  try {
+    await saveCollection();
+  } catch (error) {
+    addMessage(`No se pudo guardar en la nube: ${error.message}`);
+    return;
+  }
+  addMessage(`Guardado: ${operations.length} lamina(s).`);
   render();
 }
 
@@ -687,10 +740,14 @@ function renderSheet() {
       : "Aun falta en tu album.";
 }
 
-function updateSelected(delta) {
+async function updateSelected(delta) {
   if (!selectedCode) return;
   collection[selectedCode] = Math.max(0, (collection[selectedCode] || 0) + delta);
-  saveCollection();
+  try {
+    await saveCollection();
+  } catch (error) {
+    addMessage(`No se pudo guardar en la nube: ${error.message}`);
+  }
   render();
 }
 

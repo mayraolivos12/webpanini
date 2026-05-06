@@ -721,6 +721,16 @@ h1, h2, .brand, .display {
   padding: 6px 12px;
 }
 
+.quick-form input:disabled,
+.quick-form button:disabled {
+  cursor: wait;
+  opacity: .62;
+}
+
+.quick-form.is-processing input {
+  background: color-mix(in srgb, var(--country-primary) 8%, white);
+}
+
 .messages {
   display: grid;
   gap: 6px;
