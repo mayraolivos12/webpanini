@@ -3,6 +3,7 @@ const DIRTY_KEY = "webpanini-collection-dirty-v1";
 const LOGIN_PATH = "/login";
 const ALBUM_PATH = "/album";
 const PREFIX_ALIASES = { SWI: "SUI" };
+const QUICK_TEXT_LIMIT = 20000;
 const stickers = window.STICKERS || [];
 const byCode = new Map(stickers.map((item) => [item.code.toUpperCase(), item]));
 const albumStickers = stickers.filter((item) => item.inAlbum);
@@ -107,6 +108,8 @@ const els = {
   chatForm: document.querySelector("#chatForm"),
   chatInput: document.querySelector("#chatInput"),
   chatSubmit: document.querySelector("#chatSubmit"),
+  quickCount: document.querySelector("#quickCount"),
+  quickStatus: document.querySelector("#quickStatus"),
   searchInput: document.querySelector("#searchInput"),
   stateFilter: document.querySelector("#stateFilter"),
   countryGrid: document.querySelector("#countryGrid"),
@@ -148,12 +151,14 @@ init();
 
 async function init() {
   bindEvents();
+  updateQuickPreview();
   addMessage("Listo. Ejemplo: Tengo COL 1, 2 y CC-LAM7 repetida.");
   await setupSupabase();
   if (!cloudEnabled || currentUser) render();
 }
 
 function bindEvents() {
+  els.chatInput.addEventListener("input", updateQuickPreview);
   els.chatForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (chatProcessing) return;
@@ -163,6 +168,7 @@ function bindEvents() {
     try {
       await applyChat(text);
       els.chatInput.value = "";
+      updateQuickPreview();
     } finally {
       setChatProcessing(false);
     }
@@ -233,6 +239,30 @@ function scheduleSaveCollection(delay = 75) {
     pendingSavePromise = pendingSavePromise
       .catch(() => {})
       .then(() => saveCloudSnapshot(snapshot))
+      .then(() => clearCollectionDirty(version))
+      .catch((error) => addMessage(`No se pudo guardar en la nube: ${error.message}`));
+  }, delay);
+}
+
+async function saveChangedCodes(codes) {
+  const uniqueCodes = [...new Set(codes)].filter((code) => byCode.has(code));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(collection));
+  const version = markCollectionDirty();
+  if (currentUser && uniqueCodes.length) await saveCloudCodes(uniqueCodes);
+  clearCollectionDirty(version);
+}
+
+function scheduleSaveCodes(codes, delay = 75) {
+  const uniqueCodes = [...new Set(codes)].filter((code) => byCode.has(code));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(collection));
+  const version = markCollectionDirty();
+  if (!currentUser || !uniqueCodes.length) return;
+  clearTimeout(pendingSaveTimer);
+  pendingSaveTimer = setTimeout(() => {
+    const snapshot = Object.fromEntries(uniqueCodes.map((code) => [code, collection[code] || 0]));
+    pendingSavePromise = pendingSavePromise
+      .catch(() => {})
+      .then(() => saveCloudCodeSnapshot(snapshot))
       .then(() => clearCollectionDirty(version))
       .catch((error) => addMessage(`No se pudo guardar en la nube: ${error.message}`));
   }, delay);
@@ -438,6 +468,34 @@ async function saveCloudSnapshot(snapshot) {
   if (deleteError) throw deleteError;
 }
 
+async function saveCloudCodes(codes) {
+  const snapshot = Object.fromEntries(codes.map((code) => [code, collection[code] || 0]));
+  return saveCloudCodeSnapshot(snapshot);
+}
+
+async function saveCloudCodeSnapshot(snapshot) {
+  const entries = Object.entries(snapshot);
+  const rows = entries
+    .filter(([, quantity]) => quantity > 0)
+    .map(([code, quantity]) => ({ user_id: currentUser.id, code, quantity, updated_at: new Date().toISOString() }));
+  const zeroCodes = entries
+    .filter(([, quantity]) => quantity <= 0)
+    .map(([code]) => code);
+
+  if (rows.length) {
+    const { error: upsertError } = await supabaseClient.from("user_stickers").upsert(rows);
+    if (upsertError) throw upsertError;
+  }
+
+  if (!zeroCodes.length) return;
+  const { error: deleteError } = await supabaseClient
+    .from("user_stickers")
+    .delete()
+    .eq("user_id", currentUser.id)
+    .in("code", zeroCodes);
+  if (deleteError) throw deleteError;
+}
+
 function setChatProcessing(isProcessing) {
   chatProcessing = isProcessing;
   els.chatInput.disabled = isProcessing;
@@ -446,28 +504,54 @@ function setChatProcessing(isProcessing) {
   els.chatForm.classList.toggle("is-processing", isProcessing);
 }
 
+function setQuickStatus(message) {
+  if (els.quickStatus) els.quickStatus.textContent = message;
+}
+
+function updateQuickPreview() {
+  const text = els.chatInput.value || "";
+  const count = extractCodes(text).length;
+  if (els.quickCount) els.quickCount.textContent = `${count} codigo${count === 1 ? "" : "s"} detectado${count === 1 ? "" : "s"}`;
+  if (text.length >= QUICK_TEXT_LIMIT) setQuickStatus("Limite de texto alcanzado");
+  else if (!chatProcessing) setQuickStatus("Listo");
+}
+
 async function applyChat(text) {
-  addMessage("Procesando laminas...");
+  setQuickStatus("Procesando...");
+  if (text.length >= QUICK_TEXT_LIMIT && !extractCodes(text).length) {
+    setQuickStatus("Texto muy largo sin codigos");
+    addMessage("Texto muy largo. Usa codigos como COL1, MEX20 o divide el mensaje.");
+    return;
+  }
+
   const operations = await getChatOperations(text);
   if (!operations.length) {
+    setQuickStatus("Sin codigos validos");
     addMessage("No encontre codigos validos. Usa COL 1, MEX13, FWC9, CC-LAM7, LD o CR.");
     return;
   }
+  const changedCodes = new Set();
   operations.forEach(({ code, action }) => {
     const current = collection[code] || 0;
-    if (action === "missing") collection[code] = 0;
-    else if (action === "remove") collection[code] = Math.max(0, current - 1);
-    else if (action === "duplicate") collection[code] = Math.max(2, current + 1);
-    else collection[code] = Math.max(1, current);
+    let next = current;
+    if (action === "missing") next = 0;
+    else if (action === "remove") next = Math.max(0, current - 1);
+    else if (action === "duplicate") next = Math.max(2, current + 1);
+    else next = Math.max(1, current);
+    collection[code] = next;
+    if (next !== current) changedCodes.add(code);
   });
+  render();
+  setQuickStatus("Guardando...");
   try {
-    await saveCollection();
+    await saveChangedCodes([...changedCodes]);
   } catch (error) {
+    setQuickStatus("Error al guardar");
     addMessage(`No se pudo guardar en la nube: ${error.message}`);
     return;
   }
-  addMessage(`Guardado: ${operations.length} lamina(s).`);
-  render();
+  setQuickStatus("Guardado");
+  addMessage(`Guardado: ${changedCodes.size} cambio(s), ${operations.length} codigo(s) leido(s).`);
 }
 
 async function getChatOperations(text) {
@@ -810,7 +894,7 @@ function renderSheet() {
 function updateSelected(delta) {
   if (!selectedCode) return;
   collection[selectedCode] = Math.max(0, (collection[selectedCode] || 0) + delta);
-  scheduleSaveCollection();
+  scheduleSaveCodes([selectedCode]);
   render();
 }
 

@@ -106,9 +106,13 @@
           <section class="side-card quick-card">
             <p class="mono side-kicker">INGRESO RAPIDO</p>
             <form id="chatForm" class="quick-form">
-              <input id="chatInput" placeholder="COL 1, 2..." autocomplete="off" />
+              <textarea id="chatInput" placeholder="COL 1, 2..." autocomplete="off" maxlength="20000" rows="2"></textarea>
               <button id="chatSubmit" type="submit">OK</button>
             </form>
+            <div class="quick-meta">
+              <span id="quickCount">0 codigos detectados</span>
+              <span id="quickStatus">Listo</span>
+            </div>
             <div id="messages" class="messages"></div>
           </section>
 

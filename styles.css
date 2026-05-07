@@ -703,15 +703,18 @@ h1, h2, .brand, .display {
 }
 
 .quick-form {
-  align-items: center;
+  align-items: stretch;
   display: flex;
   gap: 6px;
   margin-top: 6px;
 }
 
-.quick-form input {
+.quick-form textarea {
   flex: 1;
+  min-height: 48px;
+  min-width: 0;
   padding: 6px 10px;
+  resize: vertical;
 }
 
 .quick-form button {
@@ -721,14 +724,29 @@ h1, h2, .brand, .display {
   padding: 6px 12px;
 }
 
-.quick-form input:disabled,
+.quick-form textarea:disabled,
 .quick-form button:disabled {
   cursor: wait;
   opacity: .62;
 }
 
-.quick-form.is-processing input {
+.quick-form.is-processing textarea {
   background: color-mix(in srgb, var(--country-primary) 8%, white);
+}
+
+.quick-meta {
+  align-items: center;
+  color: var(--ink-2);
+  display: flex;
+  font-size: 11px;
+  gap: 8px;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.quick-meta span:last-child {
+  color: var(--country-accent);
+  text-align: right;
 }
 
 .messages {
