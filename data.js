@@ -1183,7 +1183,7 @@
         "inAlbum":  true
     },
     {
-        "code":  "SWI9",
+        "code":  "SUI9",
         "name":  "Granit Xhaka",
         "section":  "Switzerland",
         "kind":  "team",
@@ -1260,7 +1260,7 @@
         "inAlbum":  true
     },
     {
-        "code":  "SWI20",
+        "code":  "SUI20",
         "name":  "Zeki Amdouni",
         "section":  "Switzerland",
         "kind":  "team",

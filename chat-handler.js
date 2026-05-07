@@ -5,6 +5,7 @@ const dataPath = path.join(__dirname, "data.js");
 const rawData = fs.readFileSync(dataPath, "utf8").replace(/^\uFEFF?window\.STICKERS = /, "").replace(/;\s*$/, "");
 const stickers = JSON.parse(rawData);
 const validCodes = new Set(stickers.map((item) => item.code.toUpperCase()));
+const prefixAliases = { SWI: "SUI" };
 
 async function handleChatRequest(req, res, body) {
   const text = String(body?.message || "").slice(0, 1000);
@@ -71,9 +72,10 @@ function fallbackParse(text) {
   const tokens = normalized.match(/[A-Z]{1,6}-?[A-Z]{0,4}\d{0,2}|00|\d{1,2}/g) || [];
 
   for (const token of tokens) {
-    if (validCodes.has(token)) {
-      found.add(token);
-      lastPrefix = token.replace(/\d+$/, "");
+    const code = canonicalCode(token);
+    if (validCodes.has(code)) {
+      found.add(code);
+      lastPrefix = code.replace(/\d+$/, "");
     } else if (/^\d{1,2}$/.test(token) && lastPrefix && validCodes.has(`${lastPrefix}${token}`)) {
       found.add(`${lastPrefix}${token}`);
     }
@@ -86,10 +88,15 @@ function sanitizeOperations(operations) {
   if (!Array.isArray(operations)) return [];
   return operations
     .map((op) => ({
-      code: String(op.code || "").toUpperCase(),
+      code: canonicalCode(op.code),
       action: ["add", "duplicate", "missing", "remove"].includes(op.action) ? op.action : "add",
     }))
     .filter((op) => validCodes.has(op.code));
+}
+
+function canonicalCode(code) {
+  const upper = String(code || "").toUpperCase();
+  return upper.replace(/^([A-Z]{3})(\d{1,2})$/, (_, prefix, number) => `${prefixAliases[prefix] || prefix}${number}`);
 }
 
 function sendJson(res, status, payload) {

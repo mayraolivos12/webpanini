@@ -1,6 +1,7 @@
 const STORAGE_KEY = "webpanini-collection-v1";
 const LOGIN_PATH = "/login";
 const ALBUM_PATH = "/album";
+const PREFIX_ALIASES = { SWI: "SUI" };
 const stickers = window.STICKERS || [];
 const byCode = new Map(stickers.map((item) => [item.code.toUpperCase(), item]));
 const albumStickers = stickers.filter((item) => item.inAlbum);
@@ -207,7 +208,7 @@ async function resetCollection() {
 }
 
 function loadCollection() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+  try { return canonicalizeCollection(JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}); }
   catch { return {}; }
 }
 
@@ -359,7 +360,7 @@ async function loadCloudCollection() {
     addMessage(`Supabase: ${error.message}`);
     return loadCollection();
   }
-  return Object.fromEntries((data || []).map((row) => [row.code, row.quantity]));
+  return canonicalizeCollection(Object.fromEntries((data || []).map((row) => [row.code, row.quantity])));
 }
 
 async function saveCloudCollection() {
@@ -448,7 +449,7 @@ async function getChatOperations(text) {
 function sanitizeOperations(operations) {
   return operations
     .map((op) => ({
-      code: String(op.code || "").toUpperCase(),
+      code: canonicalCode(String(op.code || "")),
       action: ["add", "duplicate", "missing", "remove"].includes(op.action) ? op.action : "add",
     }))
     .filter((op) => byCode.has(op.code));
@@ -472,6 +473,7 @@ function extractCodes(text) {
   const tokens = normalized.match(/[A-Z]{1,6}-?[A-Z]{0,4}\d{0,2}|00|\d{1,2}/g) || [];
   let lastPrefix = "";
   tokens.forEach((token) => {
+    token = canonicalCode(token);
     if (byCode.has(token)) {
       found.add(token);
       lastPrefix = token.replace(/\d+$/, "");
@@ -482,6 +484,20 @@ function extractCodes(text) {
     }
   });
   return [...found];
+}
+
+function canonicalCode(code) {
+  const upper = String(code || "").toUpperCase();
+  return upper.replace(/^([A-Z]{3})(\d{1,2})$/, (_, prefix, number) => `${PREFIX_ALIASES[prefix] || prefix}${number}`);
+}
+
+function canonicalizeCollection(source) {
+  const normalized = {};
+  Object.entries(source || {}).forEach(([code, quantity]) => {
+    const canonical = canonicalCode(code);
+    normalized[canonical] = Math.max(Number(normalized[canonical] || 0), Number(quantity || 0));
+  });
+  return normalized;
 }
 
 function render() {
