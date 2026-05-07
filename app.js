@@ -424,6 +424,11 @@ async function applyChat(text) {
 }
 
 async function getChatOperations(text) {
+  const localCodes = extractCodes(text);
+  if (localCodes.length) {
+    return localCodes.map((code) => ({ code, action: inferAction(text) }));
+  }
+
   try {
     const response = await fetch("/api/chat", {
       method: "POST",
