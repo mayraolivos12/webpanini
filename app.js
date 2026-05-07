@@ -1,4 +1,5 @@
 const STORAGE_KEY = "webpanini-collection-v1";
+const DIRTY_KEY = "webpanini-collection-dirty-v1";
 const LOGIN_PATH = "/login";
 const ALBUM_PATH = "/album";
 const PREFIX_ALIASES = { SWI: "SUI" };
@@ -87,6 +88,9 @@ let supabaseClient = null;
 let currentUser = null;
 let cloudEnabled = false;
 let chatProcessing = false;
+let pendingSaveTimer = null;
+let pendingSavePromise = Promise.resolve();
+let saveVersion = 0;
 
 const els = {
   loadingView: document.querySelector("#loadingView"),
@@ -214,7 +218,36 @@ function loadCollection() {
 
 async function saveCollection() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(collection));
+  const version = markCollectionDirty();
   if (currentUser) await saveCloudCollection();
+  clearCollectionDirty(version);
+}
+
+function scheduleSaveCollection(delay = 75) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(collection));
+  const version = markCollectionDirty();
+  if (!currentUser) return;
+  clearTimeout(pendingSaveTimer);
+  pendingSaveTimer = setTimeout(() => {
+    const snapshot = { ...collection };
+    pendingSavePromise = pendingSavePromise
+      .catch(() => {})
+      .then(() => saveCloudSnapshot(snapshot))
+      .then(() => clearCollectionDirty(version))
+      .catch((error) => addMessage(`No se pudo guardar en la nube: ${error.message}`));
+  }, delay);
+}
+
+function markCollectionDirty() {
+  saveVersion += 1;
+  localStorage.setItem(DIRTY_KEY, String(saveVersion));
+  return saveVersion;
+}
+
+function clearCollectionDirty(version = saveVersion) {
+  if (localStorage.getItem(DIRTY_KEY) === String(version)) {
+    localStorage.removeItem(DIRTY_KEY);
+  }
 }
 
 async function setupSupabase() {
@@ -239,15 +272,24 @@ async function setupSupabase() {
   supabaseClient = window.supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
   const { data } = await supabaseClient.auth.getSession();
   currentUser = data.session?.user || null;
-  if (currentUser) collection = await loadCloudCollection();
+  if (currentUser) await hydrateCollection();
   supabaseClient.auth.onAuthStateChange(async (_event, session) => {
     currentUser = session?.user || null;
-    if (currentUser) collection = await loadCloudCollection();
+    if (currentUser) await hydrateCollection();
     else collection = loadCollection();
     renderAuthState();
     render();
   });
   renderAuthState();
+}
+
+async function hydrateCollection() {
+  if (localStorage.getItem(DIRTY_KEY)) {
+    collection = loadCollection();
+    scheduleSaveCollection(0);
+    return;
+  }
+  collection = await loadCloudCollection();
 }
 
 function renderAuthState() {
@@ -364,7 +406,11 @@ async function loadCloudCollection() {
 }
 
 async function saveCloudCollection() {
-  const rows = Object.entries(collection)
+  return saveCloudSnapshot(collection);
+}
+
+async function saveCloudSnapshot(snapshot) {
+  const rows = Object.entries(snapshot)
     .filter(([, quantity]) => quantity > 0)
     .map(([code, quantity]) => ({ user_id: currentUser.id, code, quantity, updated_at: new Date().toISOString() }));
   const activeCodes = new Set(rows.map((row) => row.code));
@@ -761,14 +807,10 @@ function renderSheet() {
       : "Aun falta en tu album.";
 }
 
-async function updateSelected(delta) {
+function updateSelected(delta) {
   if (!selectedCode) return;
   collection[selectedCode] = Math.max(0, (collection[selectedCode] || 0) + delta);
-  try {
-    await saveCollection();
-  } catch (error) {
-    addMessage(`No se pudo guardar en la nube: ${error.message}`);
-  }
+  scheduleSaveCollection();
   render();
 }
 
