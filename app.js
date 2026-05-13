@@ -788,11 +788,11 @@ function setCountryColors(visual) {
   document.documentElement.style.setProperty("--country-primary", visual.primary);
   document.documentElement.style.setProperty("--country-secondary", visual.secondary);
   document.documentElement.style.setProperty("--country-accent", visual.accent);
-  const darkHero = relativeLuminance(visual.primary) < 0.48;
+  const darkHero = relativeLuminance(visual.primary) < 0.22;
   document.documentElement.style.setProperty("--hero-ink", darkHero ? "#ffffff" : "#1a1a1a");
   document.documentElement.style.setProperty("--hero-muted", darkHero ? "rgba(255, 255, 255, .78)" : "rgba(26, 26, 26, .72)");
-  const stickerInk = relativeLuminance(visual.primary) > 0.72 ? "#1a1a1a" : visual.primary;
-  const stickerAccentInk = relativeLuminance(visual.accent) > 0.72 ? "#1a1a1a" : visual.accent;
+  const stickerInk = relativeLuminance(visual.primary) > 0.18 ? "#1a1a1a" : visual.primary;
+  const stickerAccentInk = relativeLuminance(visual.accent) > 0.18 ? "#1a1a1a" : visual.accent;
   document.documentElement.style.setProperty("--sticker-number-ink", stickerInk);
   document.documentElement.style.setProperty("--sticker-accent-ink", stickerAccentInk);
 }

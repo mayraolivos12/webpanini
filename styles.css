@@ -318,6 +318,7 @@ h1, h2, .brand, .display {
 
 .pill-btn.solid {
   background: var(--country-primary);
+  color: var(--hero-ink);
 }
 
 .country-tabs {
@@ -378,7 +379,7 @@ h1, h2, .brand, .display {
 }
 
 .tab-count {
-  color: var(--country-primary);
+  color: var(--ink-2);
   font-size: 9px;
   font-weight: 700;
 }
