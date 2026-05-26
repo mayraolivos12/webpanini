@@ -315,20 +315,22 @@ async function setupSupabase() {
 
 async function hydrateCollection() {
   const dirtyVersion = localStorage.getItem(DIRTY_KEY);
-  if (dirtyVersion) {
-    const localCollection = loadCollection();
-    const cloudCollection = await loadCloudCollection();
+  const localCollection = loadCollection();
+  const cloudCollection = await loadCloudCollection();
+  const localOwned = countOwnedAlbum(localCollection);
+  const cloudOwned = countOwnedAlbum(cloudCollection);
+  if (dirtyVersion || localOwned > cloudOwned) {
     collection = mergeCollections(cloudCollection, localCollection);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(collection));
     try {
       await saveCloudPositiveSnapshot(collection);
-      clearCollectionDirty(dirtyVersion);
+      if (dirtyVersion) clearCollectionDirty(dirtyVersion);
     } catch (error) {
       addMessage(`No se pudo sincronizar datos locales pendientes: ${error.message}`);
     }
     return;
   }
-  collection = await loadCloudCollection();
+  collection = cloudCollection;
 }
 
 function renderAuthState() {
@@ -658,8 +660,13 @@ function mergeCollections(...sources) {
   return merged;
 }
 
+function countOwnedAlbum(source) {
+  const normalized = canonicalizeCollection(source);
+  return albumStickers.filter((item) => (normalized[item.code] || 0) > 0).length;
+}
+
 function render() {
-  const owned = albumStickers.filter((item) => (collection[item.code] || 0) > 0).length;
+  const owned = countOwnedAlbum(collection);
   const duplicates = stickers.reduce((sum, item) => sum + Math.max(0, (collection[item.code] || 0) - 1), 0);
   const extras = stickers.filter((item) => !item.inAlbum && (collection[item.code] || 0) > 0).length;
   const percent = Math.round((owned / albumStickers.length) * 100);
