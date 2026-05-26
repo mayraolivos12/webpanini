@@ -82,8 +82,19 @@ const fallbackVisuals = [
   ["#b9d136", "#2160c4", "#e94e3a"],
 ];
 
+const countryGroups = {
+  all: { label: "Todos", sections: [] },
+  uefa: { label: "Europa", sections: ["Austria", "Belgium", "Bosnia and Herzegovina", "Croatia", "Czechia", "England", "France", "Germany", "Netherlands", "Norway", "Portugal", "Scotland", "Spain", "Sweden", "Switzerland", "Türkiye"] },
+  conmebol: { label: "Sudamerica", sections: ["Argentina", "Brazil", "Colombia", "Ecuador", "Paraguay", "Uruguay"] },
+  concacaf: { label: "Norte/Centro", sections: ["Canada", "Curaçao", "Haiti", "Mexico", "Panama", "USA"] },
+  afc: { label: "Asia", sections: ["Australia", "Iran", "Iraq", "Japan", "Jordan", "Qatar", "Saudi Arabia", "South Korea", "Uzbekistan"] },
+  caf: { label: "Africa", sections: ["Algeria", "Cape Verde", "Congo DR", "Egypt", "Ghana", "Ivory Coast", "Morocco", "Senegal", "South Africa", "Tunisia"] },
+  ofc: { label: "Oceania", sections: ["New Zealand"] },
+};
+
 let collection = loadCollection();
 let activeSection = teamSections.includes("Colombia") ? "Colombia" : teamSections[0];
+let activeCountryGroup = "all";
 let selectedCode = "";
 let supabaseClient = null;
 let currentUser = null;
@@ -114,6 +125,8 @@ const els = {
   quickStatus: document.querySelector("#quickStatus"),
   searchInput: document.querySelector("#searchInput"),
   stateFilter: document.querySelector("#stateFilter"),
+  countrySelect: document.querySelector("#countrySelect"),
+  countryGroupFilters: document.querySelector("#countryGroupFilters"),
   countryGrid: document.querySelector("#countryGrid"),
   stickersGrid: document.querySelector("#stickersGrid"),
   authPanel: document.querySelector("#authPanel"),
@@ -176,6 +189,11 @@ function bindEvents() {
   });
   els.searchInput.addEventListener("input", render);
   els.stateFilter.addEventListener("change", render);
+  els.countrySelect.addEventListener("change", () => {
+    activeSection = els.countrySelect.value;
+    activeCountryGroup = getCountryGroup(activeSection);
+    render();
+  });
   document.querySelectorAll("[data-state-short]").forEach((button) => {
     button.addEventListener("click", () => {
       els.stateFilter.value = button.dataset.stateShort;
@@ -652,6 +670,7 @@ function render() {
   els.extraTotal.textContent = extras;
 
   renderCountries();
+  renderCountryControls();
   renderHeader();
   renderStickers();
   renderSidePreviews();
@@ -660,7 +679,8 @@ function render() {
 }
 
 function renderCountries() {
-  els.countryGrid.innerHTML = teamSections.map((section) => {
+  const sections = getVisibleCountrySections();
+  els.countryGrid.innerHTML = sections.map((section) => {
     const items = getSectionItems(section);
     const owned = items.filter((item) => (collection[item.code] || 0) > 0).length;
     const prefix = items[0]?.code.replace(/\d+$/, "") || "";
@@ -676,6 +696,29 @@ function renderCountries() {
   els.countryGrid.querySelectorAll(".country-tab").forEach((card) => {
     card.addEventListener("click", () => {
       activeSection = card.dataset.country;
+      render();
+    });
+  });
+}
+
+function renderCountryControls() {
+  const countryOptions = teamSections.map((section) => {
+    const items = getSectionItems(section);
+    const owned = items.filter((item) => (collection[item.code] || 0) > 0).length;
+    const label = `${getCountryName(section)} (${owned}/${items.length})`;
+    return `<option value="${escapeHtml(section)}" ${activeSection === section ? "selected" : ""}>${escapeHtml(label)}</option>`;
+  });
+  countryOptions.push(`<option value="extras" ${activeSection === "extras" ? "selected" : ""}>Extras</option>`);
+  els.countrySelect.innerHTML = countryOptions.join("");
+
+  els.countryGroupFilters.innerHTML = Object.entries(countryGroups).map(([key, group]) => (
+    `<button class="group-chip ${activeCountryGroup === key ? "active" : ""}" type="button" data-country-group="${key}">${escapeHtml(group.label)}</button>`
+  )).join("");
+  els.countryGroupFilters.querySelectorAll("[data-country-group]").forEach((button) => {
+    button.addEventListener("click", () => {
+      activeCountryGroup = button.dataset.countryGroup;
+      const sections = getVisibleCountrySections();
+      if (!sections.includes(activeSection)) activeSection = sections[0] || teamSections[0];
       render();
     });
   });
@@ -764,6 +807,16 @@ function getVisibleBaseItems() {
   if (teamSections.includes(activeSection)) return getSectionItems(activeSection);
   if (activeSection === "extras") return stickers.filter((item) => !item.inAlbum);
   return stickers;
+}
+
+function getVisibleCountrySections() {
+  if (activeCountryGroup === "all") return teamSections;
+  const sections = countryGroups[activeCountryGroup]?.sections || [];
+  return teamSections.filter((section) => sections.includes(section));
+}
+
+function getCountryGroup(section) {
+  return Object.entries(countryGroups).find(([, group]) => group.sections.includes(section))?.[0] || "all";
 }
 
 function getTeamStickerBandStyle(item) {

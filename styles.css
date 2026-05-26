@@ -326,6 +326,50 @@ h1, h2, .brand, .display {
   color: var(--hero-ink);
 }
 
+.country-picker {
+  align-items: center;
+  background: #fff;
+  border-bottom: 2px solid rgba(26, 26, 26, .12);
+  display: grid;
+  gap: 8px 12px;
+  grid-template-columns: auto minmax(220px, 320px) 1fr;
+  padding: 12px 18px;
+  position: relative;
+  z-index: 2;
+}
+
+.country-picker label {
+  margin: 0;
+}
+
+.country-picker select {
+  background: var(--paper);
+  font-weight: 700;
+  height: 38px;
+  min-width: 0;
+  padding: 4px 10px;
+  width: 100%;
+}
+
+.group-filters {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.group-chip {
+  border-radius: 999px;
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 5px 10px;
+}
+
+.group-chip.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
 .country-tabs {
   background: #fff;
   display: flex;
@@ -954,6 +998,9 @@ h1, h2, .brand, .display {
   .body-grid {
     grid-template-columns: 1fr;
     height: auto;
+  }
+  .country-picker {
+    grid-template-columns: 1fr;
   }
   .stickers-grid {
     max-height: none;
