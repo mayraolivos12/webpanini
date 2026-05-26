@@ -4424,7 +4424,7 @@
         "inAlbum":  true
     },
     {
-        "code":  "KAS12",
+        "code":  "KSA12",
         "name":  "Nasser Aldawsari",
         "section":  "Saudi Arabia",
         "kind":  "team",

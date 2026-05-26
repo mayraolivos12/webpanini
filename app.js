@@ -2,7 +2,7 @@ const STORAGE_KEY = "webpanini-collection-v1";
 const DIRTY_KEY = "webpanini-collection-dirty-v1";
 const LOGIN_PATH = "/login";
 const ALBUM_PATH = "/album";
-const PREFIX_ALIASES = { SWI: "SUI" };
+const PREFIX_ALIASES = { SWI: "SUI", KAS: "KSA" };
 const QUICK_TEXT_LIMIT = 20000;
 const stickers = window.STICKERS || [];
 const byCode = new Map(stickers.map((item) => [item.code.toUpperCase(), item]));
@@ -314,9 +314,18 @@ async function setupSupabase() {
 }
 
 async function hydrateCollection() {
-  if (localStorage.getItem(DIRTY_KEY)) {
-    collection = loadCollection();
-    scheduleSaveCollection(0);
+  const dirtyVersion = localStorage.getItem(DIRTY_KEY);
+  if (dirtyVersion) {
+    const localCollection = loadCollection();
+    const cloudCollection = await loadCloudCollection();
+    collection = mergeCollections(cloudCollection, localCollection);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(collection));
+    try {
+      await saveCloudPositiveSnapshot(collection);
+      clearCollectionDirty(dirtyVersion);
+    } catch (error) {
+      addMessage(`No se pudo sincronizar datos locales pendientes: ${error.message}`);
+    }
     return;
   }
   collection = await loadCloudCollection();
@@ -441,7 +450,7 @@ async function saveCloudCollection() {
 
 async function saveCloudSnapshot(snapshot) {
   const rows = Object.entries(snapshot)
-    .filter(([, quantity]) => quantity > 0)
+    .filter(([code, quantity]) => byCode.has(code) && quantity > 0)
     .map(([code, quantity]) => ({ user_id: currentUser.id, code, quantity, updated_at: new Date().toISOString() }));
   const activeCodes = new Set(rows.map((row) => row.code));
   const { data: existingRows, error: readError } = await supabaseClient
@@ -476,10 +485,10 @@ async function saveCloudCodes(codes) {
 async function saveCloudCodeSnapshot(snapshot) {
   const entries = Object.entries(snapshot);
   const rows = entries
-    .filter(([, quantity]) => quantity > 0)
+    .filter(([code, quantity]) => byCode.has(code) && quantity > 0)
     .map(([code, quantity]) => ({ user_id: currentUser.id, code, quantity, updated_at: new Date().toISOString() }));
   const zeroCodes = entries
-    .filter(([, quantity]) => quantity <= 0)
+    .filter(([code, quantity]) => byCode.has(code) && quantity <= 0)
     .map(([code]) => code);
 
   if (rows.length) {
@@ -494,6 +503,15 @@ async function saveCloudCodeSnapshot(snapshot) {
     .eq("user_id", currentUser.id)
     .in("code", zeroCodes);
   if (deleteError) throw deleteError;
+}
+
+async function saveCloudPositiveSnapshot(snapshot) {
+  const rows = Object.entries(snapshot)
+    .filter(([code, quantity]) => byCode.has(code) && quantity > 0)
+    .map(([code, quantity]) => ({ user_id: currentUser.id, code, quantity, updated_at: new Date().toISOString() }));
+  if (!rows.length) return;
+  const { error } = await supabaseClient.from("user_stickers").upsert(rows);
+  if (error) throw error;
 }
 
 function setChatProcessing(isProcessing) {
@@ -628,6 +646,16 @@ function canonicalizeCollection(source) {
     normalized[canonical] = Math.max(Number(normalized[canonical] || 0), Number(quantity || 0));
   });
   return normalized;
+}
+
+function mergeCollections(...sources) {
+  const merged = {};
+  sources.forEach((source) => {
+    Object.entries(canonicalizeCollection(source)).forEach(([code, quantity]) => {
+      if (quantity > 0) merged[code] = Math.max(Number(merged[code] || 0), Number(quantity));
+    });
+  });
+  return merged;
 }
 
 function render() {
