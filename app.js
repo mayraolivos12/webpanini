@@ -95,6 +95,8 @@ let saveVersion = 0;
 
 const els = {
   loadingView: document.querySelector("#loadingView"),
+  loadingTitle: document.querySelector("#loadingTitle"),
+  loadingMessage: document.querySelector("#loadingMessage"),
   appView: document.querySelector("#appView"),
   albumCounter: document.querySelector("#albumCounter"),
   albumProgress: document.querySelector("#albumProgress"),
@@ -114,7 +116,6 @@ const els = {
   stateFilter: document.querySelector("#stateFilter"),
   countryGrid: document.querySelector("#countryGrid"),
   stickersGrid: document.querySelector("#stickersGrid"),
-  resetBtn: document.querySelector("#resetBtn"),
   authPanel: document.querySelector("#authPanel"),
   authForm: document.querySelector("#authForm"),
   authEmail: document.querySelector("#authEmail"),
@@ -187,9 +188,6 @@ function bindEvents() {
     activeSection = "extras";
     render();
   });
-  els.resetBtn.addEventListener("click", () => {
-    resetCollection();
-  });
   els.closeSheet.addEventListener("click", closeSheet);
   els.sheetCloseBtn.addEventListener("click", closeSheet);
   els.sheetMinus.addEventListener("click", () => updateSelected(-1));
@@ -201,20 +199,6 @@ function bindEvents() {
   els.signupBtn.addEventListener("click", signUp);
   els.googleBtn.addEventListener("click", signInWithGoogle);
   els.logoutBtn.addEventListener("click", signOut);
-}
-
-async function resetCollection() {
-  if (!confirm("Reiniciar todo el control del album?")) return;
-  collection = {};
-  try {
-    await saveCollection();
-  } catch (error) {
-    addMessage(`No se pudo guardar en la nube: ${error.message}`);
-    return;
-  }
-  closeSheet();
-  addMessage("Datos reiniciados.");
-  render();
 }
 
 function loadCollection() {
@@ -282,6 +266,7 @@ function clearCollectionDirty(version = saveVersion) {
 
 async function setupSupabase() {
   setAuthScreenState("loading");
+  setLoadingMessage("Verificando sesion...", "Separando login y album.");
   const env = window.WEBPANINI_ENV || {};
   if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
     cloudEnabled = false;
@@ -314,6 +299,7 @@ async function setupSupabase() {
 }
 
 async function hydrateCollection() {
+  setLoadingMessage("Cargando album...", "Fusionando nube y respaldo local sin borrar datos.");
   const dirtyVersion = localStorage.getItem(DIRTY_KEY);
   const localCollection = loadCollection();
   const cloudCollection = await loadCloudCollection();
@@ -362,6 +348,11 @@ function setAuthScreenState(state) {
   els.loadingView.hidden = state !== "loading";
   els.authPanel.hidden = state !== "login";
   els.appView.hidden = !["album", "local"].includes(state);
+}
+
+function setLoadingMessage(title, message) {
+  if (els.loadingTitle) els.loadingTitle.textContent = title;
+  if (els.loadingMessage) els.loadingMessage.textContent = message;
 }
 
 function navigateTo(path) {
@@ -454,29 +445,9 @@ async function saveCloudSnapshot(snapshot) {
   const rows = Object.entries(snapshot)
     .filter(([code, quantity]) => byCode.has(code) && quantity > 0)
     .map(([code, quantity]) => ({ user_id: currentUser.id, code, quantity, updated_at: new Date().toISOString() }));
-  const activeCodes = new Set(rows.map((row) => row.code));
-  const { data: existingRows, error: readError } = await supabaseClient
-    .from("user_stickers")
-    .select("code")
-    .eq("user_id", currentUser.id);
-  if (readError) throw readError;
-
-  if (rows.length) {
-    const { error: upsertError } = await supabaseClient.from("user_stickers").upsert(rows);
-    if (upsertError) throw upsertError;
-  }
-
-  const staleCodes = (existingRows || [])
-    .map((row) => row.code)
-    .filter((code) => !activeCodes.has(code));
-
-  if (!staleCodes.length) return;
-  const { error: deleteError } = await supabaseClient
-    .from("user_stickers")
-    .delete()
-    .eq("user_id", currentUser.id)
-    .in("code", staleCodes);
-  if (deleteError) throw deleteError;
+  if (!rows.length) return;
+  const { error } = await supabaseClient.from("user_stickers").upsert(rows);
+  if (error) throw error;
 }
 
 async function saveCloudCodes(codes) {

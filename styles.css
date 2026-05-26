@@ -185,6 +185,11 @@ h1, h2, .brand, .display {
   margin: 0;
 }
 
+.loading-card p:last-child {
+  color: var(--ink-2);
+  margin: 10px 0 0;
+}
+
 .auth-panel {
   align-items: stretch;
   background:
